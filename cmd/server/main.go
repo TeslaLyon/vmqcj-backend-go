@@ -1,5 +1,6 @@
 package main
 
+// TODO: 修复项目初始化登录密码不正确的情况 admin123
 import (
 	"context"
 	"crypto/md5"
@@ -413,9 +414,9 @@ func createDefaultGlobalSettings(db *gorm.DB) error {
 	settings := []model.GlobalSetting{
 		{Key: "app_name", Value: "VMQFox"},
 		{Key: "app_version", Value: "2.0.0"},
-		{Key: "register_enabled", Value: "1"},
+		{Key: "register_enabled", Value: "0"},
 		{Key: "register_default_role", Value: "admin"},
-		{Key: "register_require_approval", Value: "0"},
+		{Key: "register_require_approval", Value: "1"},
 		{Key: "register_rate_limit", Value: "10"},
 	}
 

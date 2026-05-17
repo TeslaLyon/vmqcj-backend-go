@@ -1,17 +1,14 @@
 name: Deploy Go App to Server
 
-# 触发条件：当 main 分支有代码 push 时触发
 on:
   push:
     branches:
       - main
 
-# ⚠️ 关键修改：明确赋予工作流推送到 GHCR 镜像仓库的权限
 permissions:
-  contents: read    # 读取代码权限
-  packages: write   # 写入（推送）镜像的权限
+  contents: read    
+  packages: write   
 
-# 定义要执行的任务
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -27,21 +24,22 @@ jobs:
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }} # GitHub 自动生成的临时 Token
+        password: ${{ secrets.GITHUB_TOKEN }} 
 
-    # 3. 提取镜像标签（仅将用户名部分转换为小写，保持变量名 IMAGE_NAME 大写）
+    # 3. 提取镜像标签
     - name: Downcase repo name
       run: |
         OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
         echo "IMAGE_NAME=ghcr.io/${OWNER_LOWER}/vmqcj:latest" >> $GITHUB_ENV
 
-    # ---- 📢 在这里新增两步，用于支持跨平台构建 ----
+    # 4. 开启跨平台编译环境支持
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-    # 4. 构建 Docker 镜像并推送到仓库
+
+    # 5. 构建真正的原生 ARM64 镜像并推送到仓库
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -49,8 +47,9 @@ jobs:
         file: ./Dockerfile
         push: true
         tags: ${{ env.IMAGE_NAME }}
+        platforms: linux/arm64  # ⚠️ 明确指定打包成 ARM64 架构镜像
 
-    # 5. 通过 SSH 远程连接服务器，拉取新镜像并重启容器
+    # 6. 把 docker-compose.yml 拷贝到服务器（仅负责拷贝）
     - name: Copy docker-compose to Server
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -59,24 +58,31 @@ jobs:
         key: ${{ secrets.SERVER_SSH_KEY }}
         source: "docker-compose.yml" 
         target: "/home/cj/web_services/vmqcj-backend-go"
+
+    # 7. 💡 独立出来的步骤：通过 SSH 远程连接服务器执行自动化部署
+    - name: Deploy to Server via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
-          set -e  # 报错即停止
+          set -e  # 遇到任何错误立刻停止
           
-          # 1. 进入你在服务器上的部署目录
+          # 进入服务器部署目录
           cd /home/cj/web_services/vmqcj-backend-go
           
-          # 2. 登录到 GitHub 镜像仓库
+          # 登录到镜像仓库
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           
-          # 3. 设置环境变量，告知 Compose 使用哪一个最新的镜像
+          # 设置环境变量供 docker-compose 消费
           export API_IMAGE=${{ env.IMAGE_NAME }}
           
-          # 4. 拉取最新的镜像（包括 API 和 MariaDB）
+          # 拉取最新镜像
           docker compose pull
           
-          # 5. 启动（或更新）整套服务
-          # --remove-orphans 会清理掉不再定义在 compose 文件中的旧容器
+          # 启动服务，并强行清理掉改名留下的旧孤儿容器（--remove-orphans）
           docker compose up -d --remove-orphans
             
-          # 6. 清理无用镜像，节省磁盘
+          # 清理无用虚假镜像
           docker image prune -f
