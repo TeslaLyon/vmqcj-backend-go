@@ -232,6 +232,78 @@ func (h *SettingHandler) MonitorHeart(c *gin.Context) {
 	response.Success(c, nil)
 }
 
+// MonitorHeartOld 监控心跳(旧版)
+// @Summary 监控心跳(旧版)
+// @Description 处理监控端心跳请求(旧版)，支持GET和POST请求
+// @Tags monitor
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Param t query string true "时间戳"
+// @Param sign query string true "签名"
+// @Param appid query string false "AppID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 401 {object} response.Response
+// @Router /appHeart [post]
+// @Router /appHeart [get]
+func (h *SettingHandler) MonitorHeartOld(c *gin.Context) {
+	var req model.MonitorHeartRequest
+
+	// 兼容GET和POST请求，优先从查询参数获取
+	req.T = c.Query("t")
+	req.Sign = c.Query("sign")
+	req.AppID = c.Query("appid")
+
+	// 如果查询参数为空，尝试从表单数据获取
+	if req.T == "" || req.Sign == "" {
+		if err := c.ShouldBind(&req); err != nil {
+			// response.ValidationFailed(c, err.Error())
+			c.JSON(200, gin.H{
+				"code": -1,
+				"msg":  "Missing required parameters",
+			})
+			return
+		}
+	}
+
+	// 验证必需参数
+	if req.T == "" || req.Sign == "" {
+		log.Printf("心跳参数验证失败: t=%s, sign=%s, appid=%s", req.T, req.Sign, req.AppID)
+		// response.ValidationFailed(c, "Missing required parameters: t and sign")
+		c.JSON(200, gin.H{
+			"code": -1,
+			"msg":  "Missing required parameters: t and sign",
+		})
+		return
+	}
+
+	log.Printf("收到心跳请求: t=%s, sign=%s, appid=%s", req.T, req.Sign, req.AppID)
+
+	err := h.settingService.ProcessMonitorHeart(&req)
+	if err != nil {
+		if err == service.ErrInvalidSign {
+			// response.Error(c, response.CodeUnauthorized, "Invalid signature")
+			c.JSON(200, gin.H{
+				"code": -1,
+				"msg":  "Invalid signature",
+			})
+			return
+		}
+		// response.InternalError(c, "Failed to process monitor heart")
+		c.JSON(200, gin.H{
+			"code": -1,
+			"msg":  "Failed to process monitor heart",
+		})
+		return
+	}
+
+	// response.Success(c, nil)
+	c.JSON(200, gin.H{
+		"code": 1,
+		"msg":  "success",
+	})
+}
+
 // MonitorPush 监控推送
 // @Summary 监控推送
 // @Description 处理监控端推送请求
@@ -261,6 +333,52 @@ func (h *SettingHandler) MonitorPush(c *gin.Context) {
 	}
 
 	response.Success(c, nil)
+}
+
+// MonitorPushOld 监控推送(旧版)
+// @Summary 监控推送(旧版)
+// @Description 处理监控端推送请求(旧版)
+// @Tags monitor
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Param push formData model.MonitorPushRequest true "推送参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 401 {object} response.Response
+// @Router /appPush [post]
+func (h *SettingHandler) MonitorPushOld(c *gin.Context) {
+	var req model.MonitorPushRequest
+	if err := c.ShouldBind(&req); err != nil {
+		// response.ValidationFailed(c, err.Error())
+		c.JSON(200, gin.H{
+			"code": -1,
+			"msg":  "Missing required parameters",
+		})
+		return
+	}
+
+	err := h.settingService.ProcessMonitorPush(&req)
+	if err != nil {
+		if err == service.ErrInvalidSign {
+			// response.Error(c, response.CodeUnauthorized, "Invalid signature")
+			c.JSON(200, gin.H{
+				"code": -1,
+				"msg":  "Invalid signature",
+			})
+			return
+		}
+		// response.InternalError(c, "Failed to process monitor push")
+		c.JSON(200, gin.H{
+			"code": -1,
+			"msg":  "Failed to process monitor push",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 1,
+		"msg":  "success",
+	})
 }
 
 // GetSystemInfo 获取系统信息

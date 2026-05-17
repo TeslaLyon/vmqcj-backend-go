@@ -1,0 +1,44 @@
+services:
+  # 独立数据库：使用 MariaDB 11.4 (LTS)，比 MySQL 5.7 更强更现代
+  fox-db:
+    image: mariadb:11.4
+    container_name: fox-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=Pcj123123..
+      - MYSQL_DATABASE=vmqfox
+      - MYSQL_USER=fox_cj
+      - MYSQL_PASSWORD=Pcj123123..
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      # 如果你有 sql 初始化文件，放入当前目录的 db/ 文件夹下
+      # - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - fox-internal
+      - gateway_net
+
+  # 独立 API 服务
+  fox-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fox-api
+    restart: always
+    depends_on:
+      fox-db:
+        condition: service_started
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./logs:/app/logs
+    environment:
+      - TZ=Asia/Shanghai
+    networks:
+      - fox-internal   # 用于连接内部数据库
+      - gateway_net    # 用于对接总网关 Caddy
+
+networks:
+  fox-internal:        # 内部私有网络，外部无法访问数据库端口
+    driver: bridge
+  gateway_net:         # 外部 Caddy 网关网络
+    external: true

@@ -285,6 +285,10 @@ func setupRouter(jwtManager *jwt.JWTManager, userHandler *handler.UserHandler, a
 		monitor.POST("/push", settingHandler.MonitorPush)   // 监控推送
 	}
 
+	router.POST("/appHeart", settingHandler.MonitorHeartOld) // 监控心跳（POST）
+	router.GET("/appHeart", settingHandler.MonitorHeartOld)  // 监控心跳（GET，兼容Android客户端）
+	router.POST("/appPush", settingHandler.MonitorPushOld)   // 监控推送
+
 	// 支付页面API路由（无需认证）
 	public := router.Group("/api/public")
 	{
@@ -382,16 +386,16 @@ func createDefaultAdmin(db *gorm.DB) error {
 
 	// 创建默认管理员
 	admin := &model.User{
-		User:   "admin",
-		Email:  "admin@vmqfox.local",
-		Pass:   string(hashedPassword),
-		Role:   "super_admin",
-		Status: 1,
-		Key:    &keyValue,
-		AppId:  &appIdValue,
-		Close:  &defaultClose,
-		PayQf:  &defaultPayQf,
-		Jkstate: &defaultJkstate,
+		User:       "admin",
+		Email:      "admin@vmqfox.local",
+		Pass:       string(hashedPassword),
+		Role:       "super_admin",
+		Status:     1,
+		Key:        &keyValue,
+		AppId:      &appIdValue,
+		Close:      &defaultClose,
+		PayQf:      &defaultPayQf,
+		Jkstate:    &defaultJkstate,
 		Created_at: now,
 		Updated_at: now,
 	}
