@@ -33,7 +33,7 @@ jobs:
     - name: Downcase repo name
       run: |
         OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-        echo "IMAGE_NAME=ghcr.io/${OWNER_LOWER}/vmqfox:latest" >> $GITHUB_ENV
+        echo "IMAGE_NAME=ghcr.io/${OWNER_LOWER}/vmqcj:latest" >> $GITHUB_ENV
 
     # 4. 构建 Docker 镜像并推送到仓库
     - name: Build and push Docker image
