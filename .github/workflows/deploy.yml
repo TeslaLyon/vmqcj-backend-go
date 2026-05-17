@@ -6,6 +6,11 @@ on:
     branches:
       - main
 
+# ⚠️ 关键修改：明确赋予工作流推送到 GHCR 镜像仓库的权限
+permissions:
+  contents: read    # 读取代码权限
+  packages: write   # 写入（推送）镜像的权限
+
 # 定义要执行的任务
 jobs:
   build-and-deploy:
