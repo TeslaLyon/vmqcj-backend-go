@@ -66,7 +66,8 @@ jobs:
           docker run -d \
             --name vmqcj-app \
             --restart always \
-            -p 80:8080 \
+            --add-host=host.docker.internal:host-gateway \
+            -v /home/cj/web_services/vmqcj-backend-go/config.yml:/app/config.yml \
             ${{ env.IMAGE_NAME }}
             
           # 清理无用的旧镜像以节省空间
