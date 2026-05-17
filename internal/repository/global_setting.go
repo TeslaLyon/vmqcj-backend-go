@@ -53,9 +53,9 @@ func (r *globalSettingRepository) GetAll() ([]model.GlobalSetting, error) {
 // GetRegisterConfig 获取注册配置
 func (r *globalSettingRepository) GetRegisterConfig() (*model.RegisterConfig, error) {
 	config := &model.RegisterConfig{
-		Enabled:         true,
+		Enabled:         false,
 		DefaultRole:     "admin",
-		RequireApproval: false,
+		RequireApproval: true,
 		RateLimit:       10,
 	}
 
@@ -82,4 +82,3 @@ func (r *globalSettingRepository) GetRegisterConfig() (*model.RegisterConfig, er
 
 	return config, nil
 }
-
