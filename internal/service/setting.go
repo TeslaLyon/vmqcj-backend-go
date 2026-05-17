@@ -110,9 +110,9 @@ func (s *settingService) GetSystemConfig(userID uint) (*model.SystemConfigRespon
 		Wxpay:     user.GetWxpay(),
 		Zfbpay:    user.GetZfbpay(),
 		// 注册配置字段（TODO: 从global_settings表获取）
-		RegisterEnabled:         "1",
+		RegisterEnabled:         "0",
 		RegisterDefaultRole:     "admin",
-		RegisterRequireApproval: "0",
+		RegisterRequireApproval: "1",
 		RegisterRateLimit:       "10",
 	}, nil
 }
