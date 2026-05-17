@@ -1,0 +1,67 @@
+name: Deploy Go App to Server
+
+# 触发条件：当 main 分支有代码 push 时触发
+on:
+  push:
+    branches:
+      - main
+
+# 定义要执行的任务
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. 拉取仓库中的源码
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. 登录到 GitHub 官方镜像仓库 (GHCR)
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }} # GitHub 自动生成的临时 Token
+
+    # 3. 提取镜像标签（转换大写到小写，因为镜像名不能有大写字母）
+    - name: Downcase repo name
+      run: |
+        echo "IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/vmqcj:latest" | tr '[:upper:]' '[:lower:]' >> $GITHUB_ENV
+
+    # 4. 构建 Docker 镜像并推送到仓库
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ env.IMAGE_NAME }}
+
+    # 5. 通过 SSH 远程连接服务器，拉取新镜像并重启容器
+    - name: Deploy to Server via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          # 登录到镜像仓库（服务器端）
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          
+          # 停止并删除旧容器（如果存在）
+          docker stop vmqcj-app || true
+          docker rm vmqcj-app || true
+          
+          # 拉取最新镜像
+          docker pull ${{ env.IMAGE_NAME }}
+          
+          # 启动新容器，将服务器的 80 端口映射到容器内的 8080 端口
+          docker run -d \
+            --name vmqcj-app \
+            --restart always \
+            -p 80:8080 \
+            ${{ env.IMAGE_NAME }}
+            
+          # 清理无用的旧镜像以节省空间
+          docker image prune -f

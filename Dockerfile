@@ -11,7 +11,7 @@ ENV GOPROXY=https://goproxy.cn,direct
 RUN go mod download
 
 # ⚠️ 关键修改：明确指定 ./cmd/server 为构建目标
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/vmqfox ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/vmqcj ./cmd/server
 
 # 阶段二：运行
 FROM alpine:latest
@@ -22,11 +22,11 @@ ENV TZ=Asia/Shanghai
 WORKDIR /app
 
 # 从编译阶段拷贝二进制文件
-COPY --from=builder /app/vmqfox /app/vmqfox
+COPY --from=builder /app/vmqcj /app/vmqcj
 
-RUN chmod +x /app/vmqfox
+RUN chmod +x /app/vmqcj
 
 # 暴露端口
 EXPOSE 8080
 
-CMD ["/app/vmqfox"]
+CMD ["/app/vmqcj"]
