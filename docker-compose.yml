@@ -11,7 +11,7 @@ services:
       - MYSQL_PASSWORD=Pcj123123..
       - TZ=Asia/Shanghai
     volumes:
-      - ./mysql_data:/var/lib/mysql
+      - /home/cj/web_services/vmqcj-backend-go/mysql_data:/var/lib/mysql
       # 如果你有 sql 初始化文件，放入当前目录的 db/ 文件夹下
       # - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
@@ -20,17 +20,15 @@ services:
 
   # 独立 API 服务
   vmq-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${API_IMAGE:-ghcr.io/teslalyon/vmqcj:latest}
     container_name: vmq-api
     restart: always
     depends_on:
       vmq-db:
         condition: service_started
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
-      - ./logs:/app/logs
+      - /home/cj/web_services/vmqcj-backend-go/config.yaml:/app/config.yaml:ro
+      - /home/cj/web_services/vmqcj-backend-go/logs:/app/logs
     environment:
       - TZ=Asia/Shanghai
     networks:
